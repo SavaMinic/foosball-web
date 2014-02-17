@@ -9,6 +9,7 @@ Route::get('/api/match/{id}', 'ApiController@getMatch');
 
 Route::post('/api/match', 'MatchController@startMatch');
 Route::delete('/api/match', 'MatchController@endMatch');
+Route::post('/api/goal', 'MatchController@concedeGoal');
 
 Route::post('/api/login', 'AccountController@login');
 Route::post('/api/logout', 'AccountController@logout');

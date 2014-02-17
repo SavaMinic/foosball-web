@@ -76,7 +76,9 @@ class MatchController extends BaseController {
 		}
 		// check if user is in some match
 		$match = DB::select(
-			'SELECT id, home_team_id FROM match WHERE finished = false AND (home_team_id = ? OR away_team_id = ?) LIMIT 1',
+			'SELECT id, home_team_id, home_score, away_score FROM match
+			WHERE finished = false AND (home_team_id = ? OR away_team_id = ?)
+			LIMIT 1 FOR UPDATE',
 			array($team->id, $team->id)
 		);
 		if (!empty($match)) {
@@ -90,6 +92,41 @@ class MatchController extends BaseController {
 		} else {
 			// user is not in match, delete him from the waiting
 			DB::delete('DELETE FROM teams_waiting WHERE team_id = ?', array($team->id));
+		}
+		return array('status' => 'ok');
+	}
+	
+	/**
+	 * Increase the score for the opponent
+	 * (as only our device know when the ball has passed the mark)
+	 */
+	public function concedeGoal() {
+		$team = Session::get('team');
+		if (empty($team)) {
+			return array('error' => 'You are not logged in!');
+		}
+		// check if user is in some match
+		$match = DB::select(
+			'SELECT id, home_team_id FROM match
+			WHERE finished = false AND (home_team_id = ? OR away_team_id = ?)
+			LIMIT 1 FOR UPDATE',
+			array($team->id, $team->id)
+		);
+		if (empty($match)) {
+			return array('error' => 'You are not in match!');
+		}
+		$match = $match[0];
+		// increase the opponent score
+		if ($match->home_team_id == $team->id) {
+			DB::update(
+				'UPDATE match SET away_score = away_score + 1, finished = (away_score = 9)::bool
+				WHERE id = ?', array($match->id)
+			);
+		} else {
+			DB::update(
+				'UPDATE match SET home_score = home_score + 1, finished = (home_score = 9)::bool
+				WHERE id = ?', array($match->id)
+			);
 		}
 		return array('status' => 'ok');
 	}
