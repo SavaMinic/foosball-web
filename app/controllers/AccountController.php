@@ -3,15 +3,20 @@
 class AccountController  extends BaseController {
 	
 	public function login() {
-		$key = Input::get('key');
-		$team = DB::select(
-			'SELECT * FROM team WHERE unique_key = ? LIMIT 1',
-			array($key)
-		);
+		$team = Session::get('team');
 		if (empty($team)) {
-			return array('error' => 'No team registered with this key!');
+			$key = Input::get('key');
+			$team = DB::select(
+				'SELECT * FROM team WHERE unique_key = ? LIMIT 1',
+				array($key)
+			);
+			if (empty($team)) {
+				return array('error' => 'No team registered with this key!');
+			}
+			$team = $team[0];
+			// put data into session
+			Session::put('team', $team);
 		}
-		$team = $team[0];
 		// check if there is match in progress
 		$activeMatch = DB::select(
 			'SELECT home.id AS home_id, home.name AS home_name,
@@ -23,8 +28,6 @@ class AccountController  extends BaseController {
 			WHERE m.finished = false AND (home.id = ? OR away.id = ?) LIMIT 1',
 			array($team->id, $team->id)
 		);
-		// put data into session
-		Session::put('team', $team);
 		return array(
 				'team' => $team,
 				'match' => $activeMatch,
@@ -37,9 +40,11 @@ class AccountController  extends BaseController {
 	}
 	
 	public function register() {
+		// user is alredy logged in (so no need for registering)
 		if (!empty(Session::get('team'))) {
 			return array('status' => 'ok');
 		}
+		// Get and check parameters
 		$name = Input::get('name');
 		$key = Input::get('key');
 		if (empty($name) || strlen($name) > 100) {
@@ -48,7 +53,7 @@ class AccountController  extends BaseController {
 		if (empty($key)) {
 			return array('error' => 'Invalid key!');
 		}
-		// check if already exists
+		// check if team already exists
 		$team = DB::select(
 			'SELECT * FROM team WHERE name = ? OR unique_key = ? LIMIT 1',
 			array($name, $key)
