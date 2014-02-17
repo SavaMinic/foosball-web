@@ -131,4 +131,40 @@ class MatchController extends BaseController {
 		return array('status' => 'ok');
 	}
 	
+	/**
+	 * Called to delete our last scored goal
+	 * (mostly for goals with middle row players)
+	 */
+	public function deleteGoal() {
+		$team = Session::get('team');
+		if (empty($team)) {
+			return array('error' => 'You are not logged in!');
+		}
+		// check if user is in some match, or his match finished in last 5 minutes
+		$match = DB::select(
+			'SELECT id, home_team_id FROM match	WHERE
+			(finished = false OR updated_at > now() - interval \'5 minutes\' )
+			AND (home_team_id = ? OR away_team_id = ?)
+			ORDER BY updated_at DESC LIMIT 1 FOR UPDATE',
+			array($team->id, $team->id)
+		);
+		if (empty($match)) {
+			return array('error' => 'You are not in match!');
+		}
+		$match = $match[0];
+		// decrease our score
+		if ($match->home_team_id == $team->id) {
+			DB::update(
+				'UPDATE match SET home_score = home_score - 1, finished = false, updated_at = now()
+				WHERE id = ? AND home_score > 0', array($match->id)
+			);
+		} else {
+			DB::update(
+				'UPDATE match SET away_score = away_score - 1, finished = false, updated_at = now()
+				WHERE id = ? AND away_score > 0', array($match->id)
+			);
+		}
+		return array('status' => 'ok');
+	}
+	
 }
