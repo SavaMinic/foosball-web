@@ -2,6 +2,12 @@
 
 class MatchController extends BaseController {
 
+	/**
+	 * Called when user wants to start match.
+	 * If noone is waiting on this table, puts this user on waiting for opponent
+	 * If someone is already waiting, create a new match
+	 * @return status => waiting | match => integer
+	 */
 	public function startMatch() {
 		$team = Session::get('team');
 		if (empty($team)) {
@@ -57,9 +63,35 @@ class MatchController extends BaseController {
 		}
 	}
 	
+	/**
+	 * If user is just waiting, delete the wait
+	 * If user is in match already, this will end the current match,
+	 * and the opponent will win with official result 10:0
+	 * @return multitype:string
+	 */
 	public function endMatch() {
-		// this will end the current match
-		// and the opponent will win with official result 10:0
+		$team = Session::get('team');
+		if (empty($team)) {
+			return array('error' => 'You are not logged in!');
+		}
+		// check if user is in some match
+		$match = DB::select(
+			'SELECT id, home_team_id FROM match WHERE finished = false AND (home_team_id = ? OR away_team_id = ?) LIMIT 1',
+			array($team->id, $team->id)
+		);
+		if (!empty($match)) {
+			$match = $match[0];
+			$homeScore = ($team->id == $match->home_team_id) ? 0 : 10;
+			// finish this match
+			DB::update(
+				'UPDATE match SET home_score = ?, away_score = ?, finished = true, updated_at = now()
+				WHERE id = ?', array($homeScore, 10 - $homeScore, $match->id)
+			);
+		} else {
+			// user is not in match, delete him from the waiting
+			DB::delete('DELETE FROM teams_waiting WHERE team_id = ?', array($team->id));
+		}
+		return array('status' => 'ok');
 	}
 	
 }
