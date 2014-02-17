@@ -37,7 +37,40 @@ class AccountController  extends BaseController {
 	}
 	
 	public function register() {
-	
+		if (!empty(Session::get('team'))) {
+			return array('status' => 'ok');
+		}
+		$name = Input::get('name');
+		$key = Input::get('key');
+		if (empty($name) || strlen($name) > 100) {
+			return array('error' => 'Invalid name!');
+		}
+		if (empty($key)) {
+			return array('error' => 'Invalid key!');
+		}
+		// check if already exists
+		$team = DB::select(
+			'SELECT * FROM team WHERE name = ? OR unique_key = ? LIMIT 1',
+			array($name, $key)
+		);
+		if (!empty($team)) {
+			if ($team[0]->unique_key == $key) {
+				// this user is already registered, so do nothing.
+				// call to /register will be made 
+				// only if the call to /login failed,
+				// so this should not happen in normal case
+				return array('status' => 'ok');
+			}
+			return array('error' => 'This team name is taken!');
+		}
+		// everything is fine, insert user
+		if (!DB::insert(
+			'INSERT INTO team(name,unique_key) VALUES (?,?)',
+			array($name, $key)
+		)) {
+			return array('error' => 'Error while registering team!');
+		}
+		return array('status' => 'ok');
 	}
 	
 }
