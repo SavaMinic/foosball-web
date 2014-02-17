@@ -16,7 +16,13 @@ class CreateMatchTable extends Migration {
 			$table->integer('home_score')->default(0);
 			$table->integer('away_score')->default(0);
 			$table->boolean('finished')->default(false);
+			$table->text('table_key');
 			$table->timestamps();
+		});
+		Schema::create('teams_waiting', function ($table) {
+			$table->increments('id');
+			$table->integer('team_id');
+			$table->text('table_key');
 		});
 	}
 
@@ -27,6 +33,7 @@ class CreateMatchTable extends Migration {
 	 */
 	public function down() {
 		Schema::drop('match');
+		Schema::drop('teams_waiting');
 	}
 
 }
