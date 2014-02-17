@@ -17,6 +17,8 @@ class CreateTeamsTable extends Migration {
 			$table->integer('games_lost');
 			$table->integer('goals_scored');
 			$table->integer('goals_conceded');
+			$table->text('unique_key')->nullable();
+			$table->unique('unique_key');
 		});
 	}
 

@@ -11,7 +11,9 @@ class HomeController extends BaseController {
 	
 	public function getStandings() {
 		$teams = DB::select(
-			'SELECT * FROM team ORDER BY games_won DESC,
+			'SELECT id, name, games_won, games_lost,
+			goals_scored, goals_conceded
+			FROM team ORDER BY games_won DESC,
 			(goals_scored-goals_conceded) DESC'
 		);
 		return array(
@@ -35,7 +37,10 @@ class HomeController extends BaseController {
 	}
 	
 	public function getTeam($id) {
-		$team = DB::select('SELECT * FROM team WHERE id = ?', array($id));
+		$team = DB::select(
+			'SELECT id, name, games_won, games_lost,
+			goals_scored, goals_conceded
+			FROM team WHERE id = ?', array($id));
 		if (!$team) {
 			return array('error' => 'Team not found!');
 		}
