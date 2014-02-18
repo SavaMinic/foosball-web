@@ -48,7 +48,7 @@ class ApiController extends BaseController {
 			array($id, $id)
 		);
 		return array(
-			'team' => $team,
+			'team' => $team[0],
 			'matches' => $teamMatches,
 		);
 	}
@@ -67,7 +67,7 @@ class ApiController extends BaseController {
 			return array('error' => 'Match not found!');
 		}
 		return array(
-			'match' => $match,
+			'match' => $match[0],
 		);
 	}
 }

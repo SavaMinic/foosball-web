@@ -1,31 +1,7 @@
 {% extends 'main' %}
 
 {% block content %}
-<div id="example"></div>
+<h2>Matches in progress:</h2>
 <h2>Standings:</h2>
-<table id="standings">
-	<tr>
-		<th colspan="2">Teams</th>
-		<th>G</th>
-		<th>W</th>
-		<th>L</th>
-		<th>GS</th>
-		<th>GC</th>
-		<th>Diff</th>
-	</tr>
-	{% for id,team in teams %}
-	<tr class="teamsRow" data-id="{{ id }}" title="Click to view team profile">
-		<td>{{ loop.index }}.</td>
-		<td>{{ team.name }}</td>
-		<td>{{ team.games_won + team.games_lost }}</td>
-		<td>{{ team.games_won }}</td>
-		<td>{{ team.games_lost }}</td>
-		<td>{{ team.goals_scored }}</td>
-		<td>{{ team.goals_conceded }}</td>
-		<td>{{ team.goals_scored - team.goals_conceded }}</td>
-	</tr>
-	{% else %}
-	<tr><td colpan="8">No registered clubs.</td></tr>
-	{% endfor %}
-</table>
+<div id="standingsComponent"></div>
 {% endblock %}
