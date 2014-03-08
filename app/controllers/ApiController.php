@@ -23,7 +23,8 @@ class ApiController extends BaseController {
 			FROM match m
 			LEFT JOIN team home ON home.id = m.home_team_id
 			LEFT JOIN team away ON away.id = m.away_team_id
-			WHERE m.finished = FALSE ORDER BY m.created_at ASC'
+			WHERE (m.finished = FALSE OR updated_at > now() - interval \'1 minute\')
+			ORDER BY m.created_at ASC'
 		);
 		return array(
 			'matches' => $matches,

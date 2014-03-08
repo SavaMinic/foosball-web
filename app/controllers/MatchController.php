@@ -169,7 +169,7 @@ class MatchController extends BaseController {
 		// check if user is in some match, or his match finished in last 5 minutes
 		$match = DB::select(
 			'SELECT id, home_team_id, away_team_id, home_score, away_score FROM match
-			WHERE (finished = false OR updated_at > now() - interval \'5 minutes\' )
+			WHERE (finished = false OR updated_at > now() - interval \'5 minutes\')
 			AND (home_team_id = ? OR away_team_id = ?)
 			ORDER BY updated_at DESC LIMIT 1 FOR UPDATE',
 			array($team->id, $team->id)
