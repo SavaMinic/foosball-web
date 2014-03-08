@@ -34,6 +34,13 @@ h3 { text-align: center; font-size: 12px; }
 	background-color: rgba(240,240,240,0.2);
 	cursor: pointer;
 }
+.matchRow {
+	color: white;
+	transition: color 500ms linear;
+}
+.matchRow.updatedRow {
+	color: red;
+}
 .goalCell { font-size: 96px; }
 #standings, #matches {
 	width: 100%;
