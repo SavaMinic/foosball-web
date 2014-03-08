@@ -5,11 +5,7 @@ class AccountController  extends BaseController {
 	public function login() {
 		$team = Session::get('team');
 		if (empty($team)) {
-			$key = Input::get('key');
-			$team = DB::select(
-				'SELECT * FROM team WHERE unique_key = ? LIMIT 1',
-				array($key)
-			);
+			$team = TeamModel::getTeamByKey( Input::get('key') );
 			if (empty($team)) {
 				return array('error' => 'No team registered with this key!');
 			}
@@ -18,19 +14,10 @@ class AccountController  extends BaseController {
 			Session::put('team', $team);
 		}
 		// check if there is match in progress
-		$activeMatch = DB::select(
-			'SELECT m.id, home.id AS home_id, home.name AS home_name,
-				away.id AS away_id, away.name AS away_name,
-				m.home_score, m.away_score, m.created_at, m.updated_at
-			FROM match m
-			LEFT JOIN team home ON home.id = m.home_team_id
-			LEFT JOIN team away ON away.id = m.away_team_id
-			WHERE m.finished = false AND (home.id = ? OR away.id = ?) LIMIT 1',
-			array($team->id, $team->id)
-		);
+		$activeMatch = MatchModel::getActiveMatchForTeam($team->id);
 		return array(
-				'team' => $team,
-				'match' => $activeMatch,
+			'team' => $team,
+			'match' => $activeMatch,
 		);
 	}
 	
@@ -54,10 +41,7 @@ class AccountController  extends BaseController {
 			return array('error' => 'Invalid key!');
 		}
 		// check if team already exists
-		$team = DB::select(
-			'SELECT * FROM team WHERE name = ? OR unique_key = ? LIMIT 1',
-			array($name, $key)
-		);
+		$team = TeamModel::getTeamIfExists($name, $key);
 		if (!empty($team)) {
 			if ($team[0]->unique_key == $key) {
 				// this user is already registered, so do nothing.
@@ -69,10 +53,7 @@ class AccountController  extends BaseController {
 			return array('error' => 'This team name is taken!');
 		}
 		// everything is fine, insert user
-		if (!DB::insert(
-			'INSERT INTO team(name,unique_key) VALUES (?,?)',
-			array($name, $key)
-		)) {
+		if (!TeamModel::registerNewTeam($name, $key)) {
 			return array('error' => 'Error while registering team!');
 		}
 		return array('status' => 'ok');

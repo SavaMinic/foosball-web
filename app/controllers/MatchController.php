@@ -18,11 +18,7 @@ class MatchController extends BaseController {
 			return array('error' => 'Table parameter is missing!');
 		}
 		// check if there is already a match on this table
-		$match = DB::select(
-			'SELECT id, home_team_id, away_team_id FROM match
-			WHERE table_key = ? AND finished = false LIMIT 1',
-			array($tableKey)
-		);
+		$match = TableModel::getMatchOnTable($tableKey);
 		if (!empty($match)) {
 			$match = $match[0];
 			// check if our team is in this match
@@ -32,34 +28,21 @@ class MatchController extends BaseController {
 			return array('match' => $match->id);
 		}
 		// check if someone waits on this table
-		$wait = DB::select(
-			'SELECT team_id FROM teams_waiting WHERE table_key = ?',
-			array($tableKey)
-		);
+		$wait = TableModel::getTeamWaitingOnTable($tableKey);
 		if (empty($wait)) {
 			// no-one is waiting, so insert this team on waiting
-			DB::insert(
-				'INSERT INTO teams_waiting(team_id, table_key) VALUES(?,?)',
-				array($team->id, $tableKey)
-			);
+			TableModel::insertTeamWaiting($team->id, $tableKey);
 			return array('status' => 'wait');
 		} else if ($wait[0]->team_id == $team->id) {
-			// user is already waiting for opponent
+			// this user is already waiting for opponent
 			return array('status' => 'wait');
 		} else {
-			return DB::transaction(function() use ($team, $tableKey, $wait) {
-				// opponent is waiting for user, so delete this 'wait' row
-				DB::delete('DELETE FROM teams_waiting WHERE table_key = ?', array($tableKey));
-				// insert the match
-				$matchId = DB::table('match')->insertGetId(array(
-					'home_team_id' => $wait[0]->team_id,
-					'away_team_id' => $team->id,
-					'table_key' => $tableKey,
-					'created_at' => 'now()',
-					'updated_at' => 'now()',
-				));
-				return array('match' => $matchId);
-			});
+			// another user is already waiting, so we can start match
+			return TableModel::startMatchOnTable(
+				$wait[0]->team_id, // waiting team becomes home team
+				$team->id, // our team becomes away team
+				$tableKey
+			);
 		}
 	}
 	
@@ -75,33 +58,21 @@ class MatchController extends BaseController {
 			return array('error' => 'You are not logged in!');
 		}
 		// check if user is in some match
-		$match = DB::select(
-			'SELECT id, home_team_id, home_score, away_score FROM match
-			WHERE finished = false AND (home_team_id = ? OR away_team_id = ?)
-			LIMIT 1 FOR UPDATE',
-			array($team->id, $team->id)
-		);
+		$match = MatchModel::getActiveMatchForTeam($team->id);
 		if (!empty($match)) {
 			$match = $match[0];
 			// finish this match as 10:0 (or 0:10)
-			$homeScore = ($team->id == $match->home_team_id) ? 0 : 10;
-			DB::update(
-				'UPDATE match SET home_score = ?, away_score = ?, finished = true, updated_at = now()
-				WHERE id = ?', array($homeScore, 10 - $homeScore, $match->id)
-			);
-			// update the teams goals counters
-			// our team concedes 10 goals
-			DB::update(
-				'UPDATE team SET goals_conceded = goals_conceded + 10 WHERE id = ?', array($team->id)
-			);
-			// opponent team scores 10 goals
-			DB::update(
-				'UPDATE team SET goals_scored = goals_scored + 10 WHERE id = ?',
-				array(($team->id == $match->home_team_id) ? $match->away_team_id : $match->home_team_id)
+			MatchModel::finishMatchOfficially($match->id, $team->id != $match->home_id);
+			// update the teams goals counters, so our team concedes 10 goals
+			MatchModel::updateTeamGoals(
+				$match->home_id,
+				$match->away_id,
+				($team->id == $match->away_id) ? 10 : 0, // if we are away, then home scored 10
+				($team->id == $match->home_id) ? 10 : 0 // if we are home, then away scored 10
 			);
 		} else {
 			// user is not in match, delete him from the waiting
-			DB::delete('DELETE FROM teams_waiting WHERE team_id = ?', array($team->id));
+			TableModel::removeTeamFromWaiting($team->id);
 		}
 		return array('status' => 'ok');
 	}
@@ -116,42 +87,21 @@ class MatchController extends BaseController {
 			return array('error' => 'You are not logged in!');
 		}
 		// check if user is in some match
-		$match = DB::select(
-			'SELECT id, home_team_id, away_team_id home_score, away_score FROM match
-			WHERE finished = false AND (home_team_id = ? OR away_team_id = ?)
-			LIMIT 1 FOR UPDATE',
-			array($team->id, $team->id)
-		);
+		$match = MatchModel::getActiveMatchForTeam($team->id);
 		if (empty($match)) {
 			return array('error' => 'You are not in match!');
 		}
 		$match = $match[0];
 		// increase the opponent score
-		if ($match->home_team_id == $team->id) {
-			DB::update(
-				'UPDATE match SET away_score = away_score + 1, finished = (away_score = 9)::bool
-				WHERE id = ?', array($match->id)
-			);
-		} else {
-			DB::update(
-				'UPDATE match SET home_score = home_score + 1, finished = (home_score = 9)::bool
-				WHERE id = ?', array($match->id)
-			);
-		}
-		// if the game is finished now (9 + 1 not yet refreshed), update the goal counters
-		if ($match->home_score == 9 || $match->away_score == 9) {
-			$homeTeamWon = $match->home_score == 9;
-			// update home team
-			DB::update(
-				'UPDATE team SET games_won = games_won + ?, games_lost = games_lost + ?,
-				goals_scored = goals_scored + ?, goals_conceded = goals_conceded + ? WHERE id = ?',
-				array($homeTeamWon ? 1 : 0, $homeTeamWon ? 0 : 1, $match->home_score, $match->away_score, $match->home_team_id)
-			);
-			// update away team
-			DB::update(
-				'UPDATE team SET games_won = games_won + ?, games_lost = games_lost + ?,
-				goals_scored = goals_scored + ?, goals_conceded = goals_conceded + ? WHERE id = ?',
-				array($homeTeamWon ? 0 : 1, $homeTeamWon ? 1 : 0, $match->away_score, $match->home_score, $match->away_team_id)
+		$forHomeTeam = $match->home_id == $team->id;
+		MatchModel::concedeGoalOnMatch($match->id, $forHomeTeam);
+		if ($forHomeTeam) $match->away_score++; else $match->home_score++;
+		
+		// if the game is finished now, update the goal counters
+		if ($match->home_score == 10 || $match->away_score == 10) {
+			MatchModel::updateTeamGoals(
+				$match->home_id, $match->away_id,
+				$match->home_score, $match->away_score
 			);
 		}
 		return array('status' => 'ok');
@@ -167,43 +117,21 @@ class MatchController extends BaseController {
 			return array('error' => 'You are not logged in!');
 		}
 		// check if user is in some match, or his match finished in last 5 minutes
-		$match = DB::select(
-			'SELECT id, home_team_id, away_team_id, home_score, away_score FROM match
-			WHERE (finished = false OR updated_at > now() - interval \'5 minutes\')
-			AND (home_team_id = ? OR away_team_id = ?)
-			ORDER BY updated_at DESC LIMIT 1 FOR UPDATE',
-			array($team->id, $team->id)
-		);
+		$match = MatchModel::getActiveMatchForTeam($team->id, true);
 		if (empty($match)) {
 			return array('error' => 'You are not in match!');
 		}
 		$match = $match[0];
+		
 		// decrease our score
-		if ($match->home_team_id == $team->id) {
-			DB::update(
-				'UPDATE match SET home_score = home_score - 1, finished = false, updated_at = now()
-				WHERE id = ? AND home_score > 0', array($match->id)
-			);
-		} else {
-			DB::update(
-				'UPDATE match SET away_score = away_score - 1, finished = false, updated_at = now()
-				WHERE id = ? AND away_score > 0', array($match->id)
-			);
-		}
+		MatchModel::unfinishThisMatch($match->id, $match->home_id == $team->id);
+		
 		// update the teams goals counters, if the game was reopened
 		if ($match->home_score == 10 || $match->away_score == 10) {
-			$homeTeamWon = $match->home_score == 10;
-			// update home team
-			DB::update(
-				'UPDATE team SET games_won = games_won - ?, games_lost = games_lost - ?,
-				goals_scored = goals_scored - ?, goals_conceded = goals_conceded - ? WHERE id = ?',
-				array($homeTeamWon ? 1 : 0, $homeTeamWon ? 0 : 1, $match->home_score, $match->away_score, $match->home_team_id)
-			);
-			// update away team
-			DB::update(
-				'UPDATE team SET games_won = games_won - ?, games_lost = games_lost - ?,
-				goals_scored = goals_scored - ?, goals_conceded = goals_conceded - ? WHERE id = ?',
-				array($homeTeamWon ? 0 : 1, $homeTeamWon ? 1 : 0, $match->away_score, $match->home_score, $match->away_team_id)
+			MatchModel::updateTeamGoals(
+				$match->home_id, $match->away_id,
+				$match->home_score, $match->away_score,
+				true // decrease the wins/lost
 			);
 		}
 		return array('status' => 'ok');
