@@ -29,7 +29,6 @@ var LiveMatches = React.createClass({
 				<th></th>
 				<th>Home</th>
 				<th></th>
-				<th></th>
 				<th>Away</th>
 				<th>Last update</th>
 			</tr>
@@ -44,8 +43,7 @@ var MatchRow = React.createClass({
 			<tr className="matchRow" title="Click to view match information">
 				<td>{this.props.index+1}.</td>
 				<td>{this.props.data.home_name}</td>
-				<td>{this.props.data.home_score}</td>
-				<td>{this.props.data.away_score}</td>
+				<td className="goalCell">{this.props.data.home_score}:{this.props.data.away_score}</td>
 				<td>{this.props.data.away_name}</td>
 				<td>{this.props.data.updated_at}</td>
 			</tr>

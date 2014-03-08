@@ -19,7 +19,7 @@ class AccountController  extends BaseController {
 		}
 		// check if there is match in progress
 		$activeMatch = DB::select(
-			'SELECT home.id AS home_id, home.name AS home_name,
+			'SELECT m.id, home.id AS home_id, home.name AS home_name,
 				away.id AS away_id, away.name AS away_name,
 				m.home_score, m.away_score, m.created_at, m.updated_at
 			FROM match m

@@ -18,7 +18,8 @@ class ApiController extends BaseController {
 		$matches = DB::select(
 			'SELECT home.id AS home_id, home.name AS home_name,
 				away.id AS away_id, away.name AS away_name,
-				m.id, m.home_score, m.away_score, m.created_at, m.updated_at
+				m.id, m.home_score, m.away_score,
+				m.created_at, to_char(m.updated_at, \'YYYY-MM-DD HH24:MI:SS\') as updated_at
 			FROM match m
 			LEFT JOIN team home ON home.id = m.home_team_id
 			LEFT JOIN team away ON away.id = m.away_team_id

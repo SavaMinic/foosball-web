@@ -9,7 +9,7 @@ var StandingsTable = React.createClass({
 				} else {
 					console.log(data.error);
 				}
-				setTimeout(this.loadStandings, 5000);
+				setTimeout(this.loadStandings, 15000);
 			}.bind(this),
 		});
 	},
