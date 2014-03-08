@@ -129,19 +129,26 @@ class MatchController extends BaseController {
 		}
 		$match = $match[0];
 		// run this as transaction
-		DB::transaction(function() use ($match, $team) {
+		return DB::transaction(function() use ($match, $team) {
+			$forHomeTeam = $match->home_id == $team->id;
 			// decrease our score
-			MatchModel::deleteGoalOnMatch($match->id, $match->home_id == $team->id);
+			MatchModel::deleteGoalOnMatch($match->id, $forHomeTeam);
 			// update the teams goals counters, if the game was reopened
 			if ($match->home_score == 10 || $match->away_score == 10) {
+				$homeTeamWon = $match->home_score == 10;
+				// if we try to delete goal if we didn't win
+				if ($forHomeTeam != $homeTeamWon ) {
+					DB::rollback();
+					return array('error' => 'You can\'t delete goal in lost match!');
+				}
 				MatchModel::updateTeamGoals(
 					$match->home_id, $match->away_id,
 					$match->home_score, $match->away_score,
 					true // decrease the wins/lost
 				);
 			}
+			return array('status' => 'ok');
 		});
-		return array('status' => 'ok');
 	}
 	
 }
