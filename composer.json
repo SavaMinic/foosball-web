@@ -1,8 +1,8 @@
 {
-	"name": "laravel/laravel",
-	"description": "The Laravel Framework.",
-	"keywords": ["framework", "laravel"],
-	"license": "MIT",
+	"name": "savaminic/foosball-web",
+	"description": "Web application for Foosball project written with Laravel + React",
+	"keywords": ["foosball", "laravel"],
+	"license": "WTFPL",
 	"require": {
 		"laravel/framework": "4.1.*",
         "rcrowe/twigbridge": "0.5.*"
