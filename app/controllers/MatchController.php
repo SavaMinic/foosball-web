@@ -61,15 +61,18 @@ class MatchController extends BaseController {
 		$match = MatchModel::getActiveMatchForTeam($team->id);
 		if (!empty($match)) {
 			$match = $match[0];
-			// finish this match as 10:0 (or 0:10)
-			MatchModel::finishMatchOfficially($match->id, $team->id != $match->home_id);
-			// update the teams goals counters, so our team concedes 10 goals
-			MatchModel::updateTeamGoals(
-				$match->home_id,
-				$match->away_id,
-				($team->id == $match->away_id) ? 10 : 0, // if we are away, then home scored 10
-				($team->id == $match->home_id) ? 10 : 0 // if we are home, then away scored 10
-			);
+			// run this as transaction
+			DB::transaction(function() use ($match, $team) {
+				// finish this match as 10:0 (or 0:10)
+				MatchModel::finishMatchOfficially($match->id, $team->id != $match->home_id);
+				// update the teams goals counters, so our team concedes 10 goals
+				MatchModel::updateTeamGoals(
+					$match->home_id,
+					$match->away_id,
+					($team->id == $match->away_id) ? 10 : 0, // if we are away, then home scored 10
+					($team->id == $match->home_id) ? 10 : 0 // if we are home, then away scored 10
+				);
+			});
 		} else {
 			// user is not in match, delete him from the waiting
 			TableModel::removeTeamFromWaiting($team->id);
@@ -92,18 +95,21 @@ class MatchController extends BaseController {
 			return array('error' => 'You are not in match!');
 		}
 		$match = $match[0];
-		// increase the opponent score
-		$forHomeTeam = $match->home_id == $team->id;
-		MatchModel::concedeGoalOnMatch($match->id, $forHomeTeam);
-		if ($forHomeTeam) $match->away_score++; else $match->home_score++;
-		
-		// if the game is finished now, update the goal counters
-		if ($match->home_score == 10 || $match->away_score == 10) {
-			MatchModel::updateTeamGoals(
-				$match->home_id, $match->away_id,
-				$match->home_score, $match->away_score
-			);
-		}
+		// run this as transaction
+		DB::transaction(function() use ($match, $team) {
+			// increase the opponent score
+			$forHomeTeam = $match->home_id == $team->id;
+			MatchModel::concedeGoalOnMatch($match->id, $forHomeTeam);
+			if ($forHomeTeam) $match->away_score++; else $match->home_score++;
+			
+			// if the game is finished now, update the goal counters
+			if ($match->home_score == 10 || $match->away_score == 10) {
+				MatchModel::updateTeamGoals(
+					$match->home_id, $match->away_id,
+					$match->home_score, $match->away_score
+				);
+			}
+		});
 		return array('status' => 'ok');
 	}
 	
@@ -122,18 +128,19 @@ class MatchController extends BaseController {
 			return array('error' => 'You are not in match!');
 		}
 		$match = $match[0];
-		
-		// decrease our score
-		MatchModel::unfinishThisMatch($match->id, $match->home_id == $team->id);
-		
-		// update the teams goals counters, if the game was reopened
-		if ($match->home_score == 10 || $match->away_score == 10) {
-			MatchModel::updateTeamGoals(
-				$match->home_id, $match->away_id,
-				$match->home_score, $match->away_score,
-				true // decrease the wins/lost
-			);
-		}
+		// run this as transaction
+		DB::transaction(function() use ($match, $team) {
+			// decrease our score
+			MatchModel::deleteGoalOnMatch($match->id, $match->home_id == $team->id);
+			// update the teams goals counters, if the game was reopened
+			if ($match->home_score == 10 || $match->away_score == 10) {
+				MatchModel::updateTeamGoals(
+					$match->home_id, $match->away_id,
+					$match->home_score, $match->away_score,
+					true // decrease the wins/lost
+				);
+			}
+		});
 		return array('status' => 'ok');
 	}
 	

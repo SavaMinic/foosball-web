@@ -73,7 +73,7 @@ class MatchModel {
 		);
 	}
 
-	public static function unfinishThisMatch($matchId, $forHomeTeam) {
+	public static function deleteGoalOnMatch($matchId, $forHomeTeam) {
 		// decrease our score
 		if ($forHomeTeam) {
 			DB::update(
