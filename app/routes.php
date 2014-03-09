@@ -1,7 +1,12 @@
 <?php
 
 // web front page
-Route::get('/', 'HomeController@showHome');
+Route::get('/', 'HomeController@showMain');
+Route::get('/home', 'HomeController@showMain');
+Route::get('/team/{id}', 'HomeController@showMain');
+// dinamically injected content for the front pages
+Route::get('/content/home', 'HomeController@showHome');
+Route::get('/content/team/{id}', 'HomeController@showTeam');
 
 // Calls for front end to show data
 // Standings with all teams

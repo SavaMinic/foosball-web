@@ -8,8 +8,9 @@ body {
 	background: #111 url('/img/body-bg.jpg') no-repeat 50% 0;
 	color: white;
 }
-a { color: white; }
+a { color: white; text-decoration: none; }
 a:hover { color: #ccc; }
+.error { color: red; text-align: center; }
 
 #content {
 	width: 800px;
@@ -30,7 +31,7 @@ h1 {
 h2 { font-size: 24px; margin: 20px 0 5px; color: #5FFF59; text-transform: uppercase; }
 h3 { text-align: center; font-size: 12px; }
 
-.teamRow:hover, .matchRow:hover {
+.teamRow:hover {
 	background-color: rgba(240,240,240,0.2);
 	cursor: pointer;
 }

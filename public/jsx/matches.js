@@ -2,7 +2,7 @@
 var LiveMatches = React.createClass({
 	loadMatches: function() {
 		$.ajax({
-			url: 'api/live', dataType: 'json',
+			url: '/api/live', dataType: 'json',
 			success: function(data) {
 				if (data.matches) {
 					this.setState({
@@ -71,7 +71,3 @@ var MatchRow = React.createClass({
 		);
 	}
 });
-React.renderComponent(
-	<LiveMatches />,
-	document.getElementById('liveMatchesComponent')
-);

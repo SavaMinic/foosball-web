@@ -2,7 +2,7 @@
 var StandingsTable = React.createClass({displayName: 'StandingsTable',
 	loadStandings: function() {
 		$.ajax({
-			url: 'api/standings', dataType: 'json',
+			url: '/api/standings', dataType: 'json',
 			success: function(data) {
 				if (data.teams) {
 					this.setState({rows: data.teams});
@@ -42,7 +42,7 @@ var StandingsTable = React.createClass({displayName: 'StandingsTable',
 var TeamRow = React.createClass({displayName: 'TeamRow',
 	render: function() {
 		return (
-			React.DOM.tr( {className:"teamRow", title:"Click to view team information"}, 
+			React.DOM.tr( {className:"teamRow", title:"Click to view team information", 'data-id':this.props.key}, 
 				React.DOM.td(null, this.props.index+1,"."),
 				React.DOM.td(null, this.props.data.name),
 				React.DOM.td(null, this.props.data.games_won + this.props.data.games_lost),
@@ -55,7 +55,3 @@ var TeamRow = React.createClass({displayName: 'TeamRow',
 		);
 	}
 });
-React.renderComponent(
-	StandingsTable(null ),
-	document.getElementById('standingsComponent')
-);

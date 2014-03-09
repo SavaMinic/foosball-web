@@ -11,12 +11,13 @@ class TeamModel {
 	
 	public static function getTeamById($teamId) {
 		// we are not returning key here
-		return DB::select(
+		$team = DB::select(
 			'SELECT id, name, games_won, games_lost,
 			goals_scored, goals_conceded
 			FROM team WHERE id = ? LIMIT 1',
-			array($id)
+			array($teamId)
 		);
+		return !empty($team) ? $team[0] : null;
 	}
 	
 	public static function getTeamIfExists($name, $key) {
